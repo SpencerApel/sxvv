@@ -1,14 +1,26 @@
 .TH sxvv 1 sxvv\-VERSION
+
 .SH NAME
 sxvv \- Simple X Video Viewer
+
 .SH SYNOPSIS
+.B sxvv
+.RB [ \-h ]
+.IR file ...
+
 .SH DESCRIPTION
+sxvv is a simple video viewer/selector.
+.P
+sxvv has one mode of operation: thumbnail mode, in which ffmpeg creates a thumbnail of one or more videos and places them in a grid of small previews. The selected thumbnail will play the corresponding video in your favorite video player.
+.P
+
 .SH OPTIONS
+.TP
+.B \-h, \-\-help
+Pring a help message and exit
+
 .SH AUTHOR
-.EX
 Spencer Apel <spencerapel at gmail.com>
-.EE
+
 .SH HOMEPAGE
-.EX
 https://github.com/SpencerApel/sxvv
-.EE
