@@ -19,6 +19,6 @@ tbd
 ## Usage
 tbd
 ## Feature Requests
-###### Features requested that may be added later, or features to add some convience that are not necessarily important to the program
+###### Features requested that may be added later, or features to add some convience that are not necessarily important to the program.
 - Gif view of selected/highlighted video in thumbnail mode
 - Bar at bottom displaying video name, length, type
