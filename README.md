@@ -22,3 +22,5 @@ tbd
 ###### Features requested that may be added later, or features to add some convience that are not necessarily important to the program.
 - Gif view of selected/highlighted video in thumbnail mode
 - Bar at bottom displaying video name, length, type
+
+Check [Projects](https://github.com/SpencerApel/sxvv/projects/1) to see a to do list of current features and issues being worked on.
