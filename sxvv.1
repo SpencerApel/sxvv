@@ -5,7 +5,7 @@ sxvv \- Simple X Video Viewer
 
 .SH SYNOPSIS
 .B sxvv
-.RB [ \-h ]
+.RB [ \-hqrv ]
 .IR file ...
 
 .SH DESCRIPTION
@@ -16,8 +16,17 @@ sxvv has one mode of operation: thumbnail mode, in which ffmpeg creates a thumbn
 
 .SH OPTIONS
 .TP
-.B \-h, \-\-help
-Pring a help message and exit
+.B \-h
+Print a help message and exit
+.TP
+.B \-q
+Quiet, disable warning to stderr
+.TP
+.B \-r
+Search directories recursively for videos
+.TP
+.B \-v
+Print version information and exit
 
 .SH AUTHOR
 Spencer Apel <spencerapel at gmail.com>
