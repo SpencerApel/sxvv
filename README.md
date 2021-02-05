@@ -9,6 +9,11 @@ Not many linux video players support thumbnails, and the only way I have noticed
 
 I wanted to create this program because many of my backed up videos from my phone have names like: "screenrecording-01-01-2020.mp4" similar to the naming conventions on screenshots. And I would have no idea what the video would be about. [sxiv](https://github.com/muennich/sxiv) fixed the issue for my photos and screenshots, but I needed something for my videos.
 
+## Features
+- Thumbnail view
+- Mouse scrolling
+- Vim/Arrow Key navigation
+
 ## Dependencies
 - X11
 - Imlib2
