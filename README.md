@@ -20,7 +20,7 @@ I wanted to create this program because many of my backed up videos from my phon
 - ffmpeg
 
 ## Download
-tbd
+I wouldn't yet, still pretty useless
 ## Building
 tbd
 ## Usage
