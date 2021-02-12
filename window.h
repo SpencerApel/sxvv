@@ -3,14 +3,9 @@
 
 #include <X11/Xlib.h>
 
-#define CLEANMASK(mask) ((mask) & ~LockMask)
-
 typedef enum win_cur_e
 {
     CURSOR_ARROW = 0,
-    CURSOR_NONE,
-    CURSOR_HAND,
-    CURSOR_WATCH
 } win_cur_t;
 
 typedef struct win_env_s

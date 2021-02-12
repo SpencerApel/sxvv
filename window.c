@@ -9,7 +9,7 @@
 #include "window.h"
 
 static Cursor carrow;
-static Cursor cnone;
+//static Cursor cnone;
 static GC gc;
 
 Atom wm_delete_win;
@@ -20,8 +20,6 @@ void win_open(win_t *win)
     XClassHint classhint;
     XColor col;
     XGCValues gcval;
-    char none_data[] = {0, 0, 0, 0, 0, 0, 0, 0};
-    Pixmap none;
     int gmask;
 
     if (!win)
@@ -86,8 +84,6 @@ void win_open(win_t *win)
     if (!XAllocNamedColor(e->dpy, DefaultColormap(e->dpy, e->scr), "black",
                           &col, &col))
         die("could not allocate color: black");
-    none = XCreateBitmapFromData(e->dpy, win->xwin, none_data, 8, 8);
-    cnone = XCreatePixmapCursor(e->dpy, none, none, &col, &col, 0, 0);
 
     gcval.line_width = 2;
     gc = XCreateGC(e->dpy, win->xwin, GCLineWidth, &gcval);
@@ -109,7 +105,6 @@ void win_close(win_t *win)
         return;
 
     XFreeCursor(win->env.dpy, carrow);
-    XFreeCursor(win->env.dpy, cnone);
 
     XFreeGC(win->env.dpy, gc);
 
@@ -230,14 +225,5 @@ void win_set_cursor(win_t *win, win_cur_t cursor)
     if (!win)
         return;
 
-    switch (cursor)
-    {
-    case CURSOR_NONE:
-        XDefineCursor(win->env.dpy, win->xwin, cnone);
-        break;
-    case CURSOR_ARROW:
-    default:
-        XDefineCursor(win->env.dpy, win->xwin, carrow);
-        break;
-    }
+    XDefineCursor(win->env.dpy, win->xwin, carrow);
 }

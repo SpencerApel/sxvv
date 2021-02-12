@@ -2,11 +2,9 @@
 #include <string.h>
 #include <dirent.h>
 #include <sys/stat.h>
-#include <sys/time.h>
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
-//#include <X11/keysym.h>
 
 #include "image.h"
 #include "options.h"
@@ -33,15 +31,10 @@ char win_title[TITLE_LEN];
 
 void cleanup()
 {
-    static int in = 0;
-
-    if (!in++)
-    {
-        img_close(&img);
-        img_free(&img);
-        tns_free(&tns, &win);
-        win_close(&win);
-    }
+    img_close(&img);
+    img_free(&img);
+    tns_free(&tns, &win);
+    win_close(&win);
 }
 
 int load_image()
@@ -64,9 +57,9 @@ int main(int argc, char **argv)
     const char *filename;
     struct stat fstats;
 
-    parse_options(argc, argv);
+    parse_options(argc, argv); // figure out what to do with cmd line arguments
 
-    if (!options->filecnt)
+    if (!options->filecnt) // if no arguments are given, print usage and exit
     {
         print_usage();
         exit(1);
@@ -139,8 +132,7 @@ int check_append(const char *filename)
         if (fileidx == filecnt)
         {
             filecnt *= 2;
-            filenames = (const char**) s_realloc(filenames,
-                                                 filecnt * sizeof(const char*));
+            filenames = (const char**) s_realloc(filenames, filecnt * sizeof(const char*));
         }
         filenames[fileidx++] = filename;
         return 1;
@@ -168,6 +160,7 @@ void read_dir_rec(const char *dirname)
     struct dirent *dentry;
     struct stat fstats;
 
+    // if not directory, return
     if (!dirname)
         return;
 
@@ -202,8 +195,7 @@ void read_dir_rec(const char *dirname)
                     if (diridx == dircnt)
                     {
                         dircnt *= 2;
-                        dirnames = (const char**) s_realloc(dirnames,
-                                                            dircnt * sizeof(const char*));
+                        dirnames = (const char**) s_realloc(dirnames, dircnt * sizeof(const char*));
                     }
                     dirnames[diridx++] = filename;
                 }
@@ -231,17 +223,10 @@ void read_dir_rec(const char *dirname)
 }
 
 /* event handling */
-#define TO_THUMBS_LOAD 75000;
-int timo_cursor;
-int timo_redraw;
-
-unsigned char drag;
-int mox, moy;
-
 void redraw()
 {
+    // re-render thumbnails
     tns_render(&tns, &win);
-    timo_redraw = 0;
 }
 
 void on_keypress(XKeyEvent *kev)
@@ -250,15 +235,24 @@ void on_keypress(XKeyEvent *kev)
     KeySym ksym;
     int changed;
 
+    // if no keypress event, return
     if (!kev)
         return;
 
-    XLookupString(kev, &key, 1, &ksym, NULL);
+    XLookupString(kev, &key, 1, &ksym, NULL); // translates a key event to a KeySym and a string
     changed = 0;
 
     switch (ksym)
     {
     /* move selection */
+    /*h, left arrow moves selection to the left
+      j, down arrow moves selection down
+      k, up arrow moves selection up
+      l, right arrow moves selection to the right
+
+      then calls on tns_move_selection to actually move the selection
+      to the correct position, which returns a value greater than 0
+      causing the screen to refresh*/
     case XK_h:
     case XK_Left:
         changed = tns_move_selection(&tns, &win, TNS_LEFT);
@@ -275,30 +269,33 @@ void on_keypress(XKeyEvent *kev)
     case XK_Right:
         changed = tns_move_selection(&tns, &win, TNS_RIGHT);
         break;
+
+    // g, goes to first thumbnail in list
     case XK_g:
         if (tns.sel != 0)
         {
+            // set tns.sel to 0 thus selecting the first one
             tns.sel = 0;
             changed = tns.dirty = 1;
         }
         break;
+    // G, goes to last thumbnail in list
     case XK_G:
         if (tns.sel != tns.cnt - 1)
         {
+            // set tns.sel to the total amount of thumbnails
+            // thus selecting the last one
             tns.sel = tns.cnt - 1;
             changed = tns.dirty = 1;
         }
-    }
-    /* common key mappings */
-    switch (ksym)
-    {
+        break;
+    // escape and q key quits program
     case XK_Escape:
-        cleanup();
-        exit(2);
     case XK_q:
         cleanup();
         exit(0);
     }
+    // if user presses button (not esc or q), redraw screen
     if (changed)
         redraw();
 }
@@ -307,103 +304,58 @@ void on_buttonpress(XButtonEvent *bev)
 {
     int changed;
 
+    // if no button event, return
     if (!bev)
         return;
 
     changed = 0;
     switch (bev->button)
     {
+    // scroll up
     case Button4:
         changed = tns_scroll(&tns, TNS_UP);
         break;
+    // scroll down
     case Button5:
         changed = tns_scroll(&tns, TNS_DOWN);
         break;
     }
-
+    // if user scrolls up or down, redraw screen
     if (changed)
         redraw();
 }
 
 void run()
 {
-    int xfd, timeout;
-    fd_set fds;
-    struct timeval tt, t0, t1;
     XEvent ev;
 
-    timo_cursor = timo_redraw = 0;
-    drag = 0;
+    win_set_cursor(&win, CURSOR_ARROW); // set the shape of the cursor
 
     while (1)
     {
+        // if the number of thumbnails loaded is
+        // less than the number of 'files' to load
         if(tns.cnt < filecnt)
         {
-            win_set_cursor(&win, CURSOR_WATCH);
-            gettimeofday(&t0, 0);
-
+            // while tns.cnt is still less than nnumber of 'files' to load
+            // and not pending on display, load the next file/image
             while (!XPending(win.env.dpy) && tns.cnt < filecnt)
-            {
                 tns_load(&tns, &win, filenames[tns.cnt]);
-                gettimeofday(&t1, 0);
-                if (TV_TO_DOUBLE(t1) - TV_TO_DOUBLE(t0) >= 0.25)
-                    break;
-            }
-            if (tns.cnt == filecnt)
-                win_set_cursor(&win, CURSOR_ARROW);
+
+            // if not pending on display, redraw
             if (!XPending(win.env.dpy))
-            {
                 redraw();
-                continue;
-            }
-            else
-            {
-                timo_redraw = TO_THUMBS_LOAD;
-            }
-        }
-        else if (timo_cursor || timo_redraw)
-        {
-            gettimeofday(&t0, 0);
-            if (timo_cursor && timo_redraw)
-                timeout = MIN(timo_cursor, timo_redraw);
-            else if (timo_cursor)
-                timeout = timo_cursor;
-            else
-                timeout = timo_redraw;
-            tt.tv_sec = timeout / 1000000;
-            tt.tv_usec = timeout % 1000000;
-            xfd = ConnectionNumber(win.env.dpy);
-            FD_ZERO(&fds);
-            FD_SET(xfd, &fds);
-
-            if (!XPending(win.env.dpy))
-                select(xfd + 1, &fds, 0, 0, &tt);
-            gettimeofday(&t1, 0);
-            timeout = MIN((TV_TO_DOUBLE(t1) - TV_TO_DOUBLE(t0)) * 1000000, timeout);
-
-            if (timo_cursor)
-            {
-                timo_cursor = MAX(0, timo_cursor - timeout);
-                if (!timo_cursor)
-                    win_set_cursor(&win, CURSOR_NONE);
-            }
-            if (timo_redraw)
-            {
-                timo_redraw = MAX(0, timo_redraw - timeout);
-                if (!timo_redraw)
-                    redraw();
-            }
-            if (!XPending(win.env.dpy) && (timo_cursor || timo_redraw))
-                continue;
         }
 
         if (!XNextEvent(win.env.dpy, &ev))
         {
             switch (ev.type)
             {
+            // key navigation/selection
             case KeyPress:
                 on_keypress(&ev.xkey);
                 break;
+            // mouse buttons, just scrolling
             case ButtonPress:
                 on_buttonpress(&ev.xbutton);
                 break;
