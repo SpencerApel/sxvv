@@ -24,7 +24,6 @@ win_t win;
 #define FNAME_CNT 1024
 const char **filenames;
 int filecnt, fileidx;
-size_t filesize;
 
 #define TITLE_LEN 256
 char win_title[TITLE_LEN];
@@ -39,23 +38,15 @@ void cleanup()
 
 int load_image()
 {
-    struct stat fstats;
+    img_close(&img); // close previously loaded image
 
-    img_close(&img);
-
-    if (!stat(filenames[fileidx], &fstats))
-        filesize = fstats.st_size;
-    else
-        filesize = 0;
-
-    return img_load(&img, filenames[fileidx]);
+    return img_load(&img, filenames[fileidx]); // call img_load function from image.c
 }
 
 int main(int argc, char **argv)
 {
-    int i;
     const char *filename;
-    struct stat fstats;
+    struct stat fstats; // info about the file stored here
 
     parse_options(argc, argv); // figure out what to do with cmd line arguments
 
@@ -65,44 +56,40 @@ int main(int argc, char **argv)
         exit(1);
     }
 
+    // if arguments passed to program, set filecnt to FNAME_CNT
+    // if only arguments passed are files, set filecnt to number of files passed
     if (options->recursive || options->from_stdin)
         filecnt = FNAME_CNT;
     else
         filecnt = options->filecnt;
 
-    filenames = (const char**) s_malloc(filecnt * sizeof(const char*));
+    filenames = (const char**) s_malloc(filecnt * sizeof(const char*)); // allocate mem for filenames
     fileidx = 0;
 
-    if (options->from_stdin)
+    // loop through every file passed into program
+    for (int i = 0; i < options->filecnt; ++i)
     {
-        while ((filename = readline(stdin)))
+        filename = options->filenames[i]; //set filename to current selected file from list
+
+        // if filename attributes is not in buffer (fstats)
+        // and file is st_mode (aka file mode), and a directory
+        if (!stat(filename, &fstats) && S_ISDIR(fstats.st_mode))
         {
-            if (!*filename || !check_append(filename))
-                free((void*) filename);
-        }
-    }
-    else
-    {
-        for (i = 0; i < options->filecnt; ++i)
-        {
-            filename = options->filenames[i];
-            if (!stat(filename, &fstats) && S_ISDIR(fstats.st_mode))
-            {
-                if (options->recursive)
-                    read_dir_rec(filename);
-                else
-                    warn("ignoring directory: %s", filename);
-            }
+            // if recursive option present, read for filenames recursively
+            // else, just ignore the directory and continue on
+            if (options->recursive)
+                read_dir_rec(filename);
             else
-            {
-                check_append(filename);
-            }
+                warn("ignoring directory: %s", filename);
         }
+        else //if filename is not a directory, pass to check_append
+            check_append(filename);
     }
 
     filecnt = fileidx;
     fileidx = 0;
 
+    // if no file given, print error and exit
     if (!filecnt)
     {
         fprintf(stderr, "sxvv: no valid image filename given, aborting\n");
@@ -124,27 +111,28 @@ int main(int argc, char **argv)
 
 int check_append(const char *filename)
 {
+    // exit function if no filename
     if (!filename)
         return 0;
 
+    // if filename checks out to being an image
+    // allocate mem, put filename in list and return 1 (success)
     if (img_check(filename))
     {
         if (fileidx == filecnt)
         {
             filecnt *= 2;
-            filenames = (const char**) s_realloc(filenames, filecnt * sizeof(const char*));
+            filenames = (const char**) s_realloc(filenames, filecnt * sizeof(const char*)); // realloc mem for filenames
         }
         filenames[fileidx++] = filename;
         return 1;
     }
-    else
-    {
-        return 0;
-    }
+    return 0;
 }
 
 int fncmp(const void *a, const void *b)
 {
+    // compare files
     return strcoll(*((char* const*) a), *((char* const*) b));
 }
 
@@ -166,7 +154,7 @@ void read_dir_rec(const char *dirname)
 
     dircnt = DNAME_CNT;
     diridx = first = 1;
-    dirnames = (const char**) s_malloc(dircnt * sizeof(const char*));
+    dirnames = (const char**) s_malloc(dircnt * sizeof(const char*)); // allocate mem for directories
     dirnames[0] = dirname;
 
     fcnt = 0;
@@ -175,35 +163,36 @@ void read_dir_rec(const char *dirname)
     while (diridx > 0)
     {
         dirname = dirnames[--diridx];
+
+        // if not a directory, or could not open directory, warn
         if (!(dir = opendir(dirname)))
-        {
             warn("could not open directory: %s", dirname);
-        }
         else
         {
+            // while directory, and can be read
             while ((dentry = readdir(dir)))
             {
-                if (!strcmp(dentry->d_name, ".") || !strcmp(dentry->d_name, ".."))
-                    continue;
-
                 len = strlen(dirname) + strlen(dentry->d_name) + 2;
-                filename = (char*) s_malloc(len * sizeof(char));
+                filename = (char*) s_malloc(len * sizeof(char)); // allocate mem for filenames
                 snprintf(filename, len, "%s/%s", dirname, dentry->d_name);
 
+                // if filename attributes is not in buffer (fstats)
+                // and file is st_mode (aka file mode), and a directory
                 if (!stat(filename, &fstats) && S_ISDIR(fstats.st_mode))
                 {
                     if (diridx == dircnt)
                     {
                         dircnt *= 2;
-                        dirnames = (const char**) s_realloc(dirnames, dircnt * sizeof(const char*));
+                        dirnames = (const char**) s_realloc(dirnames, dircnt * sizeof(const char*)); // realloc mem for directories
                     }
-                    dirnames[diridx++] = filename;
+                    dirnames[diridx++] = filename; // add filename to list that represents current directory
                 }
                 else
                 {
+                    // if filename checks out, and is an image, increase file count
                     if (check_append(filename))
                         ++fcnt;
-                    else
+                    else // free the file and continue on
                         free(filename);
                 }
             }
@@ -216,6 +205,7 @@ void read_dir_rec(const char *dirname)
             first = 0;
     }
 
+    // if file count is > 1, sort the filenames list by the fncmp function.
     if (fcnt > 1)
         qsort(filenames + fstart, fcnt, sizeof(char*), fncmp);
 
@@ -289,6 +279,7 @@ void on_keypress(XKeyEvent *kev)
             changed = tns.dirty = 1;
         }
         break;
+
     // escape and q key quits program
     case XK_Escape:
     case XK_q:
