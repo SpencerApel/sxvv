@@ -29,27 +29,27 @@ void parse_options(int argc, char **argv)
     _options.quiet = 0;
     _options.recursive = 0;
 
+    // parses arguments given from stdin and runs commands accordingly
     while ((opt = getopt(argc, argv, "hqrv:")) != -1)
     {
         switch (opt)
         {
-        case 'h':
+        case 'h': // help
             print_usage();
             exit(0);
-        case 'q':
+        case 'q': // quiet, no output to stdout
             _options.quiet = 1;
             break;
-        case 'r':
+        case 'r': // recursion for directories
             _options.recursive = 1;
             break;
-        case 'v':
+        case 'v': // version
             print_version();
             exit(0);
         }
     }
 
-    _options.filenames = (const char**) argv + optind;
-    _options.filecnt = argc - optind;
-    _options.from_stdin = _options.filecnt == 1 &&
-                          strcmp(_options.filenames[0], "-") == 0;
+    _options.filenames = (const char**) argv + optind; // set filenames into list
+    _options.filecnt = argc - optind; // get file count
+    _options.from_stdin = _options.filecnt == 1 && strcmp(_options.filenames[0], "-") == 0;
 }
