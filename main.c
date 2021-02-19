@@ -280,6 +280,15 @@ void on_keypress(XKeyEvent *kev)
         }
         break;
 
+    // Press enter/return to select video thumbnail
+    // Will eventually play video somehow
+    case XK_Return:
+        // will be removed eventually, dont want program to output
+        // just want program to open video player, play video and leave sxvv open
+        // in case user wants to select another video when prev is done playing
+        printf("Video selected.\n");
+        break;
+
     // escape and q key quits program
     case XK_Escape:
     case XK_q:
